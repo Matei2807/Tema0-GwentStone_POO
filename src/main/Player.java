@@ -5,6 +5,8 @@ import fileio.DecksInput;
 import fileio.StartGameInput;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Random;
 
 public final class Player {
     private final ArrayList<ArrayList<Card>> decks;
@@ -27,59 +29,114 @@ public final class Player {
         //the rest of the fields are initialized when the game starts
     }
 
-    public void makeCards(final StartGameInput startGame, final int player){
+    /**
+     * Makes the cards for the player.
+     * @param startGame the input for the game
+     * @param player the player for which the cards are made
+     */
+    public void makeCards(final StartGameInput startGame, final int player) {
+        int deckIdx;
+        String heroName;
+        CardInput heroCard;
 
+        if (player == 1) {
+            deckIdx = startGame.getPlayerOneDeckIdx();
+            heroName = startGame.getPlayerOneHero().getName();
+            heroCard = startGame.getPlayerOneHero();
+        } else {
+            deckIdx = startGame.getPlayerTwoDeckIdx();
+            heroName = startGame.getPlayerTwoHero().getName();
+            heroCard = startGame.getPlayerTwoHero();
+        }
+
+        this.deck = new ArrayList<Card>(decks.get(deckIdx));
+        Collections.shuffle(deck, new Random(startGame.getShuffleSeed()));
+        this.hand = new ArrayList<Card>();
+        this.mana = 0;
+
+        switch (heroName) {
+            case "Lord Royce":
+                this.hero = new LordRoyce(heroCard);
+                break;
+            case "Empress Thorina":
+                this.hero = new EmpressThorina(heroCard);
+                break;
+            case "King Mudface":
+                this.hero = new KingMudface(heroCard);
+                break;
+            case "General Kocioraw":
+                this.hero = new GeneralKocioraw(heroCard);
+                break;
+            default:
+                System.out.println("Invalid hero name: " + heroName);
+        }
     }
 
-    public void pullCard(){
-
+    /**
+     * Draws a card from the deck.
+     */
+    public void pullCard() {
+        if (!deck.isEmpty()) {
+            hand.add(deck.remove(0));
+        }
     }
 
-    public ArrayList<ArrayList<Card>> getDecks() {
-        return decks;
+    /**
+     * Adds mana to the player.
+     * @param addedMana the amount of mana to be added
+     */
+    public void addMana(final int addedMana) {
+        mana += addedMana;
     }
 
-    public ArrayList<Card> getDeck() {
-        return deck;
+    /**
+     * Returns the card at the given index.
+     * @param idx the index of the card
+     */
+    public Card getCard(final int idx) {
+        return hand.get(idx);
     }
 
-    public void setDeck(ArrayList<Card> deck) {
-        this.deck = deck;
+    /**
+     * Decreases the mana of the player.
+     * @param decreasedMana the amount of mana to be decreased
+     */
+    public void decreaseMana(final int decreasedMana) {
+        mana -= decreasedMana;
     }
 
-    public ArrayList<Card> getHand() {
-        return hand;
+    /**
+     * Removes a card from the hand.
+     * @param idx the index of the card to be removed
+     */
+    public void removeCardFromHand(final int idx) {
+        hand.remove(idx);
     }
 
-    public void setHand(ArrayList<Card> hand) {
-        this.hand = hand;
-    }
-
-    public Hero getHero() {
-        return hero;
-    }
-
-    public void setHero(Hero hero) {
-        this.hero = hero;
+    /**
+     * Adds a win to the player
+     */
+    public void addWin() {
+        wins++;
     }
 
     public int getMana() {
         return mana;
     }
 
-    public void setMana(int mana) {
-        this.mana = mana;
+    public Hero getHero() {
+        return hero;
+    }
+
+    public ArrayList<Card> getHand() {
+        return hand;
+    }
+
+    public ArrayList<Card> getDeck() {
+        return deck;
     }
 
     public int getWins() {
         return wins;
-    }
-
-    public void setWins(int wins) {
-        this.wins = wins;
-    }
-
-    public void addMana(int mana) {
-        this.mana += mana;
     }
 }

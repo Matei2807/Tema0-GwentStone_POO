@@ -1,16 +1,20 @@
 package main;
 
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import fileio.ActionsInput;
 import fileio.GameInput;
 import fileio.StartGameInput;
+import fileio.Coordinates;
 
 import java.util.ArrayList;
 import java.util.Objects;
 
 import static java.lang.Math.min;
 
-public class Game {
+public final class Game {
+    public static final int MAX_MANA = 10;
+
     private final StartGameInput startGame;
     private final ArrayList<ActionsInput> actions;
     private final Player playerOne;
@@ -29,7 +33,11 @@ public class Game {
         this.gameOver = false;
     }
 
-    public void playGame(final ArrayNode output){
+    /**
+     * Plays the game according to the actions given in the input.
+     * @param output the output of the game
+     */
+    public void playGame(final ArrayNode output) {
         int round = 1;
         int turnFromRound = 1;
         boolean isStartofRound = true;
@@ -65,11 +73,20 @@ public class Game {
                 playCommand(action, output);
             }
         }
-        
-        
     }
 
-    private void playCommand(ActionsInput action, ArrayNode output) {
+    private void addMana(final int round) {
+        int mana = min(MAX_MANA, round);
+        playerOne.addMana(mana);
+        playerTwo.addMana(mana);
+    }
+
+    private void pullCard() {
+        playerOne.pullCard();
+        playerTwo.pullCard();
+    }
+
+    private void playCommand(final ActionsInput action, final ArrayNode output) {
         switch (action.getCommand()) {
             case "placeCard":
                 placeCard(action, output);
@@ -124,52 +141,413 @@ public class Game {
         }
     }
 
-    private void placeCard(ActionsInput action, ArrayNode output) {
+    private void placeCard(final ActionsInput action, final ArrayNode output) {
+        if (gameOver) {
+            return;
+        }
+
+        int handIdx = action.getHandIdx();
+        Player player = currentPlayer == 1 ? playerOne : playerTwo;
+        Card card = player.getCard(handIdx);
+        ObjectNode errorNode = output.objectNode();
+
+        if (!enoughMana(player, card)) {
+            errorNode.put("command", "placeCard");
+            errorNode.put("handIdx", handIdx);
+            errorNode.put("error", "Not enough mana to place card on table.");
+            output.add(errorNode);
+            return;
+        } else if (!board.addCard(card, currentPlayer)) {
+            errorNode.put("command", "placeCard");
+            errorNode.put("handIdx", handIdx);
+            errorNode.put("error", "Cannot place card on table since row is full.");
+            output.add(errorNode);
+            return;
+        }
+
+        player.decreaseMana(card.getMana());
+        player.removeCardFromHand(handIdx);
     }
 
-    private void cardUsesAttack(ActionsInput action, ArrayNode output) {
+    private void cardUsesAttack(final ActionsInput action, final ArrayNode output) {
+        if (gameOver) {
+            return;
+        }
+
+        Coordinates attacker = action.getCardAttacker();
+        Coordinates attacked = action.getCardAttacked();
+        Card attackerCard = board.getCard(attacker.getX(), attacker.getY());
+        Card attackedCard = board.getCard(attacked.getX(), attacked.getY());
+        ObjectNode errorNode = output.objectNode();
+
+        if (!isEnemyCard(attacker, attacked)) {
+            errorNode.put("command", "cardUsesAttack");
+            errorNode.putObject("cardAttacker").put("x", attacker.getX()).put("y", attacker.getY());
+            errorNode.putObject("cardAttacked").put("x", attacked.getX()).put("y", attacked.getY());
+            errorNode.put("error", "Attacked card does not belong to the enemy.");
+            output.add(errorNode);
+            return;
+        } else if (attackerCard.getHasAttacked()) {
+            errorNode.put("command", "cardUsesAttack");
+            errorNode.putObject("cardAttacker").put("x", attacker.getX()).put("y", attacker.getY());
+            errorNode.putObject("cardAttacked").put("x", attacked.getX()).put("y", attacked.getY());
+            errorNode.put("error", "Attacker card has already attacked this turn.");
+            output.add(errorNode);
+            return;
+        } else if (attackerCard.isFrozen()) {
+            errorNode.put("command", "cardUsesAttack");
+            errorNode.putObject("cardAttacker").put("x", attacker.getX()).put("y", attacker.getY());
+            errorNode.putObject("cardAttacked").put("x", attacked.getX()).put("y", attacked.getY());
+            errorNode.put("error", "Attacker card is frozen.");
+            output.add(errorNode);
+            return;
+        } else if (board.checkTank(currentPlayer) && !attackedCard.isTank()) {
+            errorNode.put("command", "cardUsesAttack");
+            errorNode.putObject("cardAttacker").put("x", attacker.getX()).put("y", attacker.getY());
+            errorNode.putObject("cardAttacked").put("x", attacked.getX()).put("y", attacked.getY());
+            errorNode.put("error", "Attacked card is not of type 'Tank'.");
+            output.add(errorNode);
+            return;
+        }
+
+        attackerCard.setHasAttacked(true);
+        attackedCard.decreaseHealth(attackerCard.getAttackDamage());
+        board.checkDeadCards();
     }
 
-    private void cardUsesAbility(ActionsInput action, ArrayNode output) {
+    private void cardUsesAbility(final ActionsInput action, final ArrayNode output) {
+        if (gameOver) {
+            return;
+        }
+
+        Coordinates attacker = action.getCardAttacker();
+        Coordinates attacked = action.getCardAttacked();
+        Card attackerCard = board.getCard(attacker.getX(), attacker.getY());
+        Card attackedCard = board.getCard(attacked.getX(), attacked.getY());
+        ObjectNode errorNode = output.objectNode();
+
+        if (attackerCard.isFrozen()) {
+            errorNode.put("command", "cardUsesAbility");
+            errorNode.putObject("cardAttacker").put("x", attacker.getX()).put("y", attacker.getY());
+            errorNode.putObject("cardAttacked").put("x", attacked.getX()).put("y", attacked.getY());
+            errorNode.put("error", "Attacker card is frozen.");
+            output.add(errorNode);
+            return;
+        } else if (attackerCard.getHasAttacked()) {
+            errorNode.put("command", "cardUsesAbility");
+            errorNode.putObject("cardAttacker").put("x", attacker.getX()).put("y", attacker.getY());
+            errorNode.putObject("cardAttacked").put("x", attacked.getX()).put("y", attacked.getY());
+            errorNode.put("error", "Attacker card has already attacked this turn.");
+            output.add(errorNode);
+            return;
+        } else if (attackerCard.getName().equals("Disciple") && isEnemyCard(attacker, attacked)) {
+            errorNode.put("command", "cardUsesAbility");
+            errorNode.putObject("cardAttacker").put("x", attacker.getX()).put("y", attacker.getY());
+            errorNode.putObject("cardAttacked").put("x", attacked.getX()).put("y", attacked.getY());
+            errorNode.put("error", "Attacked card does not belong to the current player.");
+            output.add(errorNode);
+            return;
+        } else if (attackerCard.getName().equals("The Cursed One")
+                || attackerCard.getName().equals("Miraj")
+                || attackerCard.getName().equals("The Ripper")) {
+            if (!isEnemyCard(attacker, attacked)) {
+                errorNode.put("command", "cardUsesAbility");
+                errorNode.putObject("cardAttacker").put("x", attacker.getX())
+                        .put("y", attacker.getY());
+                errorNode.putObject("cardAttacked").put("x", attacked.getX())
+                        .put("y", attacked.getY());
+                errorNode.put("error", "Attacked card does not belong to the enemy.");
+                output.add(errorNode);
+                return;
+            } else if (board.checkTank(currentPlayer) && !attackedCard.isTank()) {
+                errorNode.put("command", "cardUsesAbility");
+                errorNode.putObject("cardAttacker").put("x", attacker.getX())
+                        .put("y", attacker.getY());
+                errorNode.putObject("cardAttacked").put("x", attacked.getX())
+                        .put("y", attacked.getY());
+                errorNode.put("error", "Attacked card is not of type 'Tank'.");
+                output.add(errorNode);
+                return;
+            }
+        }
+
+        attackerCard.setHasAttacked(true);
+        switch (attackerCard.getName()) {
+            case "The Cursed One" -> { // swap health and attack damage of attacked card
+                int health = attackedCard.getHealth();
+                int attackDamage = attackedCard.getAttackDamage();
+                attackedCard.setHealth(attackDamage);
+                attackedCard.setAttackDamage(health);
+                board.checkDeadCards();
+            }
+            case "Miraj" -> { // swap health of attacker and attacked card
+                int health = attackedCard.getHealth();
+                attackedCard.setHealth(attackerCard.getHealth());
+                attackerCard.setHealth(health);
+            }
+            case "The Ripper" ->  // decrease attack damage of attacked card by 2
+                    attackedCard.decreaseAttackDamage(2);
+            case "Disciple" ->  // increase health of attacked card by 2
+                    attackedCard.increaseHealth(2);
+            default ->
+                    System.out.println("Invalid card name: " + attackerCard.getName());
+
+        }
     }
 
-    private void useAttackHero(ActionsInput action, ArrayNode output) {
+    private void useAttackHero(final ActionsInput action, final ArrayNode output) {
+        if (gameOver) {
+            return;
+        }
+
+        Coordinates attacker = action.getCardAttacker();
+        Card attackerCard = board.getCard(attacker.getX(), attacker.getY());
+        ObjectNode errorNode = output.objectNode();
+
+        if (attackerCard == null) {
+            errorNode.put("command", "useAttackHero");
+            errorNode.putObject("cardAttacker").put("x", attacker.getX()).put("y", attacker.getY());
+            errorNode.put("error", "No card available at that position.");
+            output.add(errorNode);
+            return;
+        }
+
+        if (attackerCard.isFrozen()) {
+            errorNode.put("command", "useAttackHero");
+            errorNode.putObject("cardAttacker").put("x", attacker.getX()).put("y", attacker.getY());
+            errorNode.put("error", "Attacker card is frozen.");
+            output.add(errorNode);
+            return;
+        } else if (attackerCard.getHasAttacked()) {
+            errorNode.put("command", "useAttackHero");
+            errorNode.putObject("cardAttacker").put("x", attacker.getX()).put("y", attacker.getY());
+            errorNode.put("error", "Attacker card has already attacked this turn.");
+            output.add(errorNode);
+            return;
+        } else if (board.checkTank(currentPlayer)) { // Not need to check if attacked card is tank
+            errorNode.put("command", "useAttackHero");
+            errorNode.putObject("cardAttacker").put("x", attacker.getX()).put("y", attacker.getY());
+            errorNode.put("error", "Attacked card is not of type 'Tank'.");
+            output.add(errorNode);
+            return;
+        }
+
+        attackerCard.setHasAttacked(true);
+        Player enemy = currentPlayer == 1 ? playerTwo : playerOne;
+        enemy.getHero().decreaseHealth(attackerCard.getAttackDamage());
+        if (enemy.getHero().getHealth() <= 0) {
+            String winner = currentPlayer == 1 ? "one" : "two";
+            ObjectNode gameEnded = output.objectNode();
+            gameEnded.put("gameEnded", "Player " + winner + " killed the enemy hero.");
+            output.add(gameEnded);
+            gameOver = true;
+            Player winnerPlayer = currentPlayer == 1 ? playerOne : playerTwo;
+            winnerPlayer.addWin();
+        }
     }
 
-    private void useHeroAbility(ActionsInput action, ArrayNode output) {
+    private void useHeroAbility(final ActionsInput action, final ArrayNode output) {
+        if (gameOver) {
+            return;
+        }
+
+        int affectedRow = action.getAffectedRow();
+        Player player = currentPlayer == 1 ? playerOne : playerTwo;
+        Hero hero = player.getHero();
+        ObjectNode errorNode = output.objectNode();
+
+        if (player.getMana() < hero.getMana()) {
+            errorNode.put("command", "useHeroAbility");
+            errorNode.put("affectedRow", affectedRow);
+            errorNode.put("error", "Not enough mana to use hero's ability.");
+            output.add(errorNode);
+            return;
+        } else if (hero.getHasAttacked()) {
+            errorNode.put("command", "useHeroAbility");
+            errorNode.put("affectedRow", affectedRow);
+            errorNode.put("error", "Hero has already attacked this turn.");
+            output.add(errorNode);
+            return;
+        } else if (hero.getUsesAbilityOnEnemy() && !heroAttacksEnemy(affectedRow)) {
+            errorNode.put("command", "useHeroAbility");
+            errorNode.put("affectedRow", affectedRow);
+            errorNode.put("error", "Selected row does not belong to the enemy.");
+            output.add(errorNode);
+            return;
+        } else if (!hero.getUsesAbilityOnEnemy() && heroAttacksEnemy(affectedRow)) {
+            errorNode.put("command", "useHeroAbility");
+            errorNode.put("affectedRow", affectedRow);
+            errorNode.put("error", "Selected row does not belong to the current player.");
+            output.add(errorNode);
+            return;
+        }
+
+        hero.ability(board.getRow(affectedRow));
+        board.checkDeadCards();
+        player.decreaseMana(hero.getMana());
+        hero.setHasAttacked(true);
     }
 
-    private void getCardsinHand(ActionsInput action, ArrayNode output) {
+    private void getCardsinHand(final ActionsInput action, final ArrayNode output) {
+        int playerIdx = action.getPlayerIdx();
+        Player player = playerIdx == 1 ? playerOne : playerTwo;
+
+        ObjectNode commandOutput = output.objectNode();
+        commandOutput.put("command", "getCardsInHand");
+        commandOutput.put("playerIdx", playerIdx);
+
+        ArrayNode cardsArray = commandOutput.putArray("output");
+        for (Card card : player.getHand()) {
+            ObjectNode cardNode = getCardNodeJson(card, cardsArray);
+            cardsArray.add(cardNode);
+        }
+        output.add(commandOutput);
     }
 
-    private void getPlayerDeck(ActionsInput action, ArrayNode output) {
+    private void getPlayerDeck(final ActionsInput action, final ArrayNode output) {
+        int playerIdx = action.getPlayerIdx();
+        Player player = playerIdx == 1 ? playerOne : playerTwo;
+
+        ObjectNode commandOutput = output.objectNode();
+        commandOutput.put("command", "getPlayerDeck");
+        commandOutput.put("playerIdx", playerIdx);
+
+        ArrayNode cardsArray = commandOutput.putArray("output");
+        for (Card card : player.getDeck()) {
+            ObjectNode cardNode = getCardNodeJson(card, cardsArray);
+            cardsArray.add(cardNode);
+        }
+        output.add(commandOutput);
     }
 
-    private void getCardsOnTable(ArrayNode output) {
+    private void getCardsOnTable(final ArrayNode output) {
+        //All cards on the table (both players) [0][0] -> [3][4]
+        ObjectNode commandOutput = output.objectNode();
+        commandOutput.put("command", "getCardsOnTable");
+
+        ArrayNode rowsArray = commandOutput.putArray("output");
+        for (int i = 0; i < Board.ROWS; i++) {
+            ArrayNode rowArray = rowsArray.addArray();
+            for (int j = 0; j < Board.COLUMNS; j++) {
+                Card card = board.getCard(i, j);
+                if (card != null) {
+                    ObjectNode cardNode = getCardNodeJson(card, rowArray);
+                    rowArray.add(cardNode);
+                }
+            }
+        }
+        output.add(commandOutput);
     }
 
-    private void getPlayerTurn(ArrayNode output) {
+    private void getPlayerTurn(final ArrayNode output) {
+        ObjectNode commandOutput = output.objectNode();
+        commandOutput.put("command", "getPlayerTurn");
+        commandOutput.put("output", currentPlayer);
+        output.add(commandOutput);
     }
 
-    private void getPlayerHero(ActionsInput action, ArrayNode output) {
+    private void getPlayerHero(final ActionsInput action, final ArrayNode output) {
+        int playerIdx = action.getPlayerIdx();
+        Player player = playerIdx == 1 ? playerOne : playerTwo;
+        Hero hero = player.getHero();
+
+        ObjectNode commandOutput = output.objectNode();
+        commandOutput.put("command", "getPlayerHero");
+        commandOutput.put("playerIdx", playerIdx);
+
+        ObjectNode heroNode = commandOutput.putObject("output");
+        heroNode.put("mana", hero.getMana());
+        heroNode.put("description", hero.getDescription());
+
+        ArrayNode colorsArray = heroNode.putArray("colors");
+        for (String color : hero.getColors()) {
+            colorsArray.add(color);
+        }
+
+        heroNode.put("name", hero.getName());
+        heroNode.put("health", hero.getHealth());
+
+        output.add(commandOutput);
     }
 
-    private void getCardAtPosition(ActionsInput action, ArrayNode output) {
+    private void getCardAtPosition(final ActionsInput action, final ArrayNode output) {
+        int x = action.getX();
+        int y = action.getY();
+        Card card = board.getCard(x, y);
+
+        ObjectNode commandOutput = output.objectNode();
+        commandOutput.put("command", "getCardAtPosition");
+        commandOutput.put("x", x);
+        commandOutput.put("y", y);
+
+        if (card == null) {
+            commandOutput.put("output", "No card available at that position.");
+        } else {
+            ObjectNode cardNode = getCardNodeJson(card, output);
+            commandOutput.put("output", cardNode);
+        }
+        output.add(commandOutput);
     }
 
-    private void getPlayerMana(ActionsInput action, ArrayNode output) {
+    private void getPlayerMana(final ActionsInput action, final ArrayNode output) {
+        int playerIdx = action.getPlayerIdx();
+        Player player = playerIdx == 1 ? playerOne : playerTwo;
+        ObjectNode commandOutput = output.objectNode();
+        commandOutput.put("command", "getPlayerMana");
+        commandOutput.put("playerIdx", playerIdx);
+        commandOutput.put("output", player.getMana());
+        output.add(commandOutput);
     }
 
-    private void getFrozenCardsOnTable(ArrayNode output) {
+    private void getFrozenCardsOnTable(final ArrayNode output) {
+        ObjectNode commandOutput = output.objectNode();
+        commandOutput.put("command", "getFrozenCardsOnTable");
+
+        ArrayNode cardsArray = commandOutput.putArray("output");
+        for (int i = 0; i < Board.ROWS; i++) {
+            for (int j = 0; j < Board.COLUMNS; j++) {
+                Card card = board.getCard(i, j);
+                if (card != null && card.isFrozen()) {
+                    ObjectNode cardNode = getCardNodeJson(card, cardsArray);
+                    cardsArray.add(cardNode);
+                }
+            }
+        }
+        output.add(commandOutput);
     }
 
-    private void getTotalGamesPlayed(ArrayNode output) {
+    private void getTotalGamesPlayed(final ArrayNode output) {
+        ObjectNode commandOutput = output.objectNode();
+        commandOutput.put("command", "getTotalGamesPlayed");
+        commandOutput.put("output", playerOne.getWins() + playerTwo.getWins());
+        output.add(commandOutput);
     }
 
-    private void getPlayerOneWins(ArrayNode output) {
+    private void getPlayerOneWins(final ArrayNode output) {
+        ObjectNode commandOutput = output.objectNode();
+        commandOutput.put("command", "getPlayerOneWins");
+        commandOutput.put("output", playerOne.getWins());
+        output.add(commandOutput);
     }
 
-    private void getPlayerTwoWins(ArrayNode output) {
+    private void getPlayerTwoWins(final ArrayNode output) {
+        ObjectNode commandOutput = output.objectNode();
+        commandOutput.put("command", "getPlayerTwoWins");
+        commandOutput.put("output", playerTwo.getWins());
+        output.add(commandOutput);
+    }
+
+    private boolean enoughMana(final Player player, final Card card) {
+        return player.getMana() >= card.getMana();
+    }
+
+    private boolean isEnemyCard(final Coordinates attacker, final Coordinates attacked) {
+        return !((attacker.getX() <= 1 && attacked.getX() <= 1)
+                || (attacker.getX() >= 2 && attacked.getX() >= 2));
+    }
+
+    private boolean heroAttacksEnemy(final int affectedRow) {
+        return currentPlayer == 1 ? affectedRow <= 1 : affectedRow >= 2;
     }
 
     private void checkUsedHero() {
@@ -177,16 +555,18 @@ public class Game {
         player.getHero().setHasAttacked(false);
     }
 
-    private void addMana(int round) {
-        int mana = min(10, round);
-        playerOne.addMana(mana);
-        playerTwo.addMana(mana);
-    }
-    
-    private void pullCard() {
-        playerOne.pullCard();
-        playerTwo.pullCard();
-    }
+    private ObjectNode getCardNodeJson(final Card card, final ArrayNode cardsArray) {
+        ObjectNode cardNode = cardsArray.objectNode();
+        cardNode.put("mana", card.getMana());
+        cardNode.put("attackDamage", card.getAttackDamage());
+        cardNode.put("health", card.getHealth());
+        cardNode.put("description", card.getDescription());
 
-
+        ArrayNode colorsArray = cardNode.putArray("colors");
+        for (String color : card.getColors()) {
+            colorsArray.add(color);
+        }
+        cardNode.put("name", card.getName());
+        return cardNode;
+    }
 }

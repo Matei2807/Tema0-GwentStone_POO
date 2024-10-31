@@ -70,7 +70,7 @@ public final class Main {
 
         ArrayNode output = objectMapper.createArrayNode();
 
-        Player playerOne = new Player(inputData.getPlayerOneDecks()); // to keep track in all games
+        Player playerOne = new Player(inputData.getPlayerOneDecks());
         Player playerTwo = new Player(inputData.getPlayerTwoDecks());
 
         for (GameInput gameInput : inputData.getGames()) {
