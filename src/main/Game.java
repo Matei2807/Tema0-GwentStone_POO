@@ -34,7 +34,7 @@ public final class Game {
     }
 
     /**
-     * Plays the game according to the actions given in the input.
+     * Plays the game according to the actions given in the input
      * @param output the output of the game
      */
     public void playGame(final ArrayNode output) {
@@ -47,7 +47,7 @@ public final class Game {
 
         for (ActionsInput action : actions) {
             if (gameOver) {
-                playCommand(action, output);
+                playCommand(action, output); // Still needs to output the commands
                 continue;
             }
 
@@ -56,9 +56,9 @@ public final class Game {
                 pullCard();
                 isStartofRound = false;
             }
-            if (Objects.equals(action.getCommand(), "endPlayerTurn")) { // End of player round
-                board.checkForzenCards(currentPlayer);
-                board.checkUsedCards(currentPlayer);
+            if (Objects.equals(action.getCommand(), "endPlayerTurn")) { // End of player turn
+                board.unfreezeCards(currentPlayer);
+                board.resetUsedCards(currentPlayer);
                 checkUsedHero();
 
                 currentPlayer = currentPlayer == 1 ? 2 : 1;
@@ -75,17 +75,29 @@ public final class Game {
         }
     }
 
+    /**
+     * Adds mana to both players
+     * @param round the current round
+     */
     private void addMana(final int round) {
         int mana = min(MAX_MANA, round);
         playerOne.addMana(mana);
         playerTwo.addMana(mana);
     }
 
+    /**
+     * Pulls a card from the deck for both players
+     */
     private void pullCard() {
-        playerOne.pullCard();
-        playerTwo.pullCard();
+        playerOne.drawCard();
+        playerTwo.drawCard();
     }
 
+    /**
+     * Plays the command given in the action
+     * @param action the action to be played
+     * @param output the output of the game
+     */
     private void playCommand(final ActionsInput action, final ArrayNode output) {
         switch (action.getCommand()) {
             case "placeCard":
@@ -104,7 +116,7 @@ public final class Game {
                 useHeroAbility(action, output);
                 break;
             case "getCardsInHand":
-                getCardsinHand(action, output);
+                getCardsInHand(action, output);
                 break;
             case "getPlayerDeck":
                 getPlayerDeck(action, output);
@@ -142,7 +154,7 @@ public final class Game {
     }
 
     private void placeCard(final ActionsInput action, final ArrayNode output) {
-        if (gameOver) {
+        if (gameOver) { // No need to place card if game is over
             return;
         }
 
@@ -170,7 +182,7 @@ public final class Game {
     }
 
     private void cardUsesAttack(final ActionsInput action, final ArrayNode output) {
-        if (gameOver) {
+        if (gameOver) { // No need to use attack if game is over
             return;
         }
 
@@ -201,7 +213,7 @@ public final class Game {
             errorNode.put("error", "Attacker card is frozen.");
             output.add(errorNode);
             return;
-        } else if (board.checkTank(currentPlayer) && !attackedCard.isTank()) {
+        } else if (board.checkEnemyTank(currentPlayer) && !attackedCard.isTank()) {
             errorNode.put("command", "cardUsesAttack");
             errorNode.putObject("cardAttacker").put("x", attacker.getX()).put("y", attacker.getY());
             errorNode.putObject("cardAttacked").put("x", attacked.getX()).put("y", attacked.getY());
@@ -212,11 +224,11 @@ public final class Game {
 
         attackerCard.setHasAttacked(true);
         attackedCard.decreaseHealth(attackerCard.getAttackDamage());
-        board.checkDeadCards();
+        board.removeDeadCards();
     }
 
     private void cardUsesAbility(final ActionsInput action, final ArrayNode output) {
-        if (gameOver) {
+        if (gameOver) { // No need to use the ability if game is over
             return;
         }
 
@@ -259,7 +271,7 @@ public final class Game {
                 errorNode.put("error", "Attacked card does not belong to the enemy.");
                 output.add(errorNode);
                 return;
-            } else if (board.checkTank(currentPlayer) && !attackedCard.isTank()) {
+            } else if (board.checkEnemyTank(currentPlayer) && !attackedCard.isTank()) {
                 errorNode.put("command", "cardUsesAbility");
                 errorNode.putObject("cardAttacker").put("x", attacker.getX())
                         .put("y", attacker.getY());
@@ -278,7 +290,7 @@ public final class Game {
                 int attackDamage = attackedCard.getAttackDamage();
                 attackedCard.setHealth(attackDamage);
                 attackedCard.setAttackDamage(health);
-                board.checkDeadCards();
+                board.removeDeadCards();
             }
             case "Miraj" -> { // swap health of attacker and attacked card
                 int health = attackedCard.getHealth();
@@ -324,7 +336,7 @@ public final class Game {
             errorNode.put("error", "Attacker card has already attacked this turn.");
             output.add(errorNode);
             return;
-        } else if (board.checkTank(currentPlayer)) { // Not need to check if attacked card is tank
+        } else if (board.checkEnemyTank(currentPlayer)) {
             errorNode.put("command", "useAttackHero");
             errorNode.putObject("cardAttacker").put("x", attacker.getX()).put("y", attacker.getY());
             errorNode.put("error", "Attacked card is not of type 'Tank'.");
@@ -383,12 +395,12 @@ public final class Game {
         }
 
         hero.ability(board.getRow(affectedRow));
-        board.checkDeadCards();
+        board.removeDeadCards();
         player.decreaseMana(hero.getMana());
         hero.setHasAttacked(true);
     }
 
-    private void getCardsinHand(final ActionsInput action, final ArrayNode output) {
+    private void getCardsInHand(final ActionsInput action, final ArrayNode output) {
         int playerIdx = action.getPlayerIdx();
         Player player = playerIdx == 1 ? playerOne : playerTwo;
 
@@ -421,7 +433,7 @@ public final class Game {
     }
 
     private void getCardsOnTable(final ArrayNode output) {
-        //All cards on the table (both players) [0][0] -> [3][4]
+        //All cards on the table (for both players) [0][0] -> [3][4]
         ObjectNode commandOutput = output.objectNode();
         commandOutput.put("command", "getCardsOnTable");
 

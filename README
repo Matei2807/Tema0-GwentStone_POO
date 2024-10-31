@@ -1,0 +1,22 @@
+## Tema 0 - GwentStone Lite:
+
+## Implementarea jocului ##
+- Pentru fiecare joc se va crea un obiect de tipul Game, care va contine toate informatiile
+necesare pentru desfasurarea lui
+- In clasa Game, prin metoda playGame() se va desfasura jocul, prin trecerea succesiva a tuturor
+comenzilor, facundu-se pe rand verificarile impuse de regulile jocului la fiecare comanda
+- Jocul incepe prin atribuirea pachetelor de carti fiecarui jucator, cat si a eroilor, prin metoda
+makeCards() a jucatorului
+- La fiecare tura sa verifica in ce stagiu al rundei se afla si se executa comanda corespunzatoare
+- Pentru a se salva cartile, se foloseste clasa Player, care contine toate atributiile necesare
+jucatorului, precum si deck-ul de carti, mana de carti, cartile jucate, eroul si scorul
+- Fiecare carte in parte este un obiect de tipul Card, care contine informatii despre ea, dar si
+atribute specifie, cum ar fi daca este inghetata, daca este de tip 'tank', sau daca a fost deja
+jucata in runda
+- Separat de carti, se foloseste si clasa Hero, care contine informatii despre erou
+- Fiecare tip de erou este un copil al clase Hero, care are abilitatea lui specifica, mostenind
+si atributele clasei parinte
+- Clasa Board reprezinta masa de joc, care contine cartiile puse pe masa, dar si metode pentru
+verificarea cartilor de pe masa
+- Pentru a se salva intre jocuri scorul, si deck-urile jucatorilor, cei doi jucatori sunt salvati
+in metoda action() din clasa Main, inainte de inceperea jocurilor

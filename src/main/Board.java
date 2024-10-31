@@ -43,7 +43,7 @@ public final class Board {
     /**
      * Removes all dead cards from the board
      */
-    public void checkDeadCards() {
+    public void removeDeadCards() {
         for (int i = 0; i < ROWS; i++) {
             for (int j = 0; j < COLUMNS; j++) {
                 if (board[i][j] != null && board[i][j].getHealth() <= 0) {
@@ -63,7 +63,7 @@ public final class Board {
      * Unfreezes all cards on the board
      * @param currentPlayer the current player
      */
-    public void checkForzenCards(final int currentPlayer) {
+    public void unfreezeCards(final int currentPlayer) {
         if (currentPlayer == 1) {
             for (int i = PLAYER1_FRONT_ROW; i <= PLAYER1_BACK_ROW; i++) {
                 for (int j = 0; j < COLUMNS; j++) {
@@ -87,7 +87,7 @@ public final class Board {
      * Resets the hasAttacked attribute of all cards on the board
      * @param currentPlayer the current player
      */
-    public void checkUsedCards(final int currentPlayer) {
+    public void resetUsedCards(final int currentPlayer) {
         if (currentPlayer == 1) {
             for (int i = PLAYER1_FRONT_ROW; i <= PLAYER1_BACK_ROW; i++) {
                 for (int j = 0; j < COLUMNS; j++) {
@@ -112,7 +112,7 @@ public final class Board {
      * @param currentPlayer the current player
      * @return true if a tank is present, false otherwise
      */
-    public boolean checkTank(final int currentPlayer) {
+    public boolean checkEnemyTank(final int currentPlayer) {
         if (currentPlayer == 1) { // check row 1
             for (int j = 0; j < COLUMNS; j++) {
                 if (board[PLAYER2_FRONT_ROW][j] != null && board[PLAYER2_FRONT_ROW][j].isTank()) {

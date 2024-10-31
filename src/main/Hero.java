@@ -79,7 +79,7 @@ class LordRoyce extends Hero {
     }
 
     @Override
-    public void ability(final Card[] affectedCardRow) {
+    public void ability(final Card[] affectedCardRow) { // Freezes the given row of cards
         for (int i = 0; i < Board.COLUMNS; i++) {
             if (affectedCardRow[i] != null) {
                 affectedCardRow[i].setFrozen(true);
@@ -98,7 +98,7 @@ class EmpressThorina extends Hero {
     public void ability(final Card[] affectedCardRow) {
         Card affectedCard = affectedCardRow[0];
         int maxHealth = 0;
-        for (int i = 0; i < Board.COLUMNS; i++) {
+        for (int i = 0; i < Board.COLUMNS; i++) { // Kills the first card with the highest health
             if (affectedCardRow[i] != null && affectedCardRow[i].getHealth() > maxHealth) {
                 maxHealth = affectedCardRow[i].getHealth();
                 affectedCard = affectedCardRow[i];
@@ -115,7 +115,7 @@ class KingMudface extends Hero {
     }
 
     @Override
-    public void ability(final Card[] affectedCardRow) {
+    public void ability(final Card[] affectedCardRow) { // Increases health of cards in the row by 1
         for (int i = 0; i < Board.COLUMNS; i++) {
             if (affectedCardRow[i] != null) {
                 affectedCardRow[i].setHealth(affectedCardRow[i].getHealth() + 1);
@@ -131,7 +131,7 @@ class GeneralKocioraw extends Hero {
     }
 
     @Override
-    public void ability(final Card[] affectedCardRow) {
+    public void ability(final Card[] affectedCardRow) { // Increases attack of cards in the row by 1
         for (int i = 0; i < Board.COLUMNS; i++) {
             if (affectedCardRow[i] != null) {
                 affectedCardRow[i].setAttackDamage(affectedCardRow[i].getAttackDamage() + 1);

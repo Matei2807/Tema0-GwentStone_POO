@@ -26,14 +26,14 @@ public final class Card {
         this.frozen = false;
         this.hasAttacked = false;
         if (cardInput.getName().equals("Goliath")
-                || cardInput.getName().equals("Warden")) {
+                || cardInput.getName().equals("Warden")) { // Check if the card is a tank
             isTank = true;
         } else {
             isTank = false;
         }
         if (cardInput.getName().equals("The Ripper")
                 || cardInput.getName().equals("Miraj")
-                || isTank) {
+                || isTank) { // Check if the card is must be placed in the last row
             this.isLastRow = false;
         } else {
             this.isLastRow = true;

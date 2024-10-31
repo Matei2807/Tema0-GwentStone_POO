@@ -30,7 +30,7 @@ public final class Player {
     }
 
     /**
-     * Makes the cards for the player.
+     * Makes the cards for the player and initializes relevant fields
      * @param startGame the input for the game
      * @param player the player for which the cards are made
      */
@@ -75,7 +75,7 @@ public final class Player {
     /**
      * Draws a card from the deck.
      */
-    public void pullCard() {
+    public void drawCard() {
         if (!deck.isEmpty()) {
             hand.add(deck.remove(0));
         }
