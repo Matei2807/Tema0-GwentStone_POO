@@ -1,3 +1,7 @@
+@Author:
+- Hutu Matei-Alexandru
+- 321CA
+
 ## Tema 0 - GwentStone Lite:
 
 ## Implementarea jocului ##
@@ -11,12 +15,16 @@ makeCards() a jucatorului
 - Pentru a se salva cartile, se foloseste clasa Player, care contine toate atributiile necesare
 jucatorului, precum si deck-ul de carti, mana de carti, cartile jucate, eroul si scorul
 - Fiecare carte in parte este un obiect de tipul Card, care contine informatii despre ea, dar si
-atribute specifie, cum ar fi daca este inghetata, daca este de tip 'tank', sau daca a fost deja
+atribute specifice, cum ar fi daca este inghetata, daca este de tip 'tank', sau daca a fost deja
 jucata in runda
 - Separat de carti, se foloseste si clasa Hero, care contine informatii despre erou
-- Fiecare tip de erou este un copil al clase Hero, care are abilitatea lui specifica, mostenind
+- Fiecare tip de erou este un copil al clasei Hero, care are abilitatea lui specifica, mostenind
 si atributele clasei parinte
 - Clasa Board reprezinta masa de joc, care contine cartiile puse pe masa, dar si metode pentru
 verificarea cartilor de pe masa
 - Pentru a se salva intre jocuri scorul, si deck-urile jucatorilor, cei doi jucatori sunt salvati
 in metoda action() din clasa Main, inainte de inceperea jocurilor
+- Se vor executa toate comenzile dintr-un joc pana se termina, sau pana un jucator castiga, caz in
+care se vor executa doar comenzile pentru output
+- Se itereaza prin jocuri in clasa Main, pana se termina toate jocurile, si se afiseaza output-ul
+final

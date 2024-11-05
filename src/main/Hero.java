@@ -4,7 +4,7 @@ import fileio.CardInput;
 
 import java.util.ArrayList;
 
-public class Hero {
+public abstract class Hero {
     public static final int MAX_HEALTH = 30;
 
     private final int mana;
