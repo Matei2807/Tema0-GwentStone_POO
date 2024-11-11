@@ -1,0 +1,29 @@
+commit 7acf77621c6431d387de5e05df6e6bb66345ce3e
+Author: Matei2807 <hutu.matei@gmail.com>
+Date:   Tue Nov 5 15:58:27 2024 +0200
+
+    Updated README and mistakes
+
+commit 991a63fa669e3d3955bd0328c318c3152f85c9da
+Author: Matei2807 <hutu.matei@gmail.com>
+Date:   Thu Oct 31 20:22:02 2024 +0200
+
+    Added README and comments
+
+commit c69320ddbd5b03c0045f63d435fbd18b837d4cb7
+Author: Matei2807 <hutu.matei@gmail.com>
+Date:   Thu Oct 31 18:51:37 2024 +0200
+
+    Finished game and checkstyle
+
+commit d9d257e562883fff0210e8a5b54a22f6183b07aa
+Author: Matei2807 <hutu.matei@gmail.com>
+Date:   Thu Oct 31 18:49:07 2024 +0200
+
+    Added relevant classes and game logic
+
+commit 68f0a6ccd589b09d73cdc4863d03007d3fc5e5eb
+Author: Matei2807 <matei@LAPTOP-QKLAO3CB>
+Date:   Thu Oct 31 18:24:38 2024 +0200
+
+    Added the skel of the project
